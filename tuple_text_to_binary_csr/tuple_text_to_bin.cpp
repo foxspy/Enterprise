@@ -152,40 +152,59 @@ int main(int argc, char** argv){
 	//step 2. each file size
 	char filename[256];
 	sprintf(filename,"%s_csr.bin",argv[1]);
-	int fd4 = open(filename,O_CREAT|O_RDWR,00666 );
-	ftruncate(fd4, edge_count*sizeof(vertex_t));
-	vertex_t* adj = (vertex_t*)mmap(NULL,edge_count*sizeof(vertex_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd4,0);
-	assert(adj != MAP_FAILED);
+	int fd1 = open(filename,O_CREAT|O_RDWR,00666 );
+	ftruncate(fd1, edge_count*sizeof(vertex_t));
+	vertex_t* csr_adj = (vertex_t*)mmap(NULL,edge_count*sizeof(vertex_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd1,0);
+	assert(csr_adj != MAP_FAILED);
+    
+	sprintf(filename,"%s_csc.bin",argv[1]);
+	int fd2 = open(filename,O_CREAT|O_RDWR,00666 );
+	ftruncate(fd2, edge_count*sizeof(vertex_t));
+	vertex_t* csc_adj = (vertex_t*)mmap(NULL,edge_count*sizeof(vertex_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd2,0);
+	assert(csc_adj != MAP_FAILED);
 
-	//added by Hang to generate a weight file
-	sprintf(filename,"%s_weight.bin",argv[1]);
+	sprintf(filename,"%s_outbeg_pos.bin",argv[1]);
+	int fd3 = open(filename,O_CREAT|O_RDWR,00666 );
+	ftruncate(fd3, (vert_count+1)*sizeof(index_t));
+	index_t* inbegin  = (index_t*)mmap(NULL,(vert_count+1)*sizeof(index_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd3,0);
+	assert(inbegin != MAP_FAILED);
+	
+	sprintf(filename,"%s_inbeg_pos.bin",argv[1]);
+	int fd4 = open(filename,O_CREAT|O_RDWR,00666 );
+	ftruncate(fd4, (vert_count+1)*sizeof(index_t));
+	index_t* outbegin  = (index_t*)mmap(NULL,(vert_count+1)*sizeof(index_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd4,0);
+	assert(outbegin != MAP_FAILED);
+    
+	sprintf(filename,"%s_outdeg.bin",argv[1]);
+	int fd5 = open(filename,O_CREAT|O_RDWR,00666 );
+	ftruncate(fd5, vert_count*sizeof(index_t));
+	index_t* indegree = (index_t*)mmap(NULL,vert_count*sizeof(index_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd5,0);
+	assert(indegree != MAP_FAILED);
+	
+    sprintf(filename,"%s_outdeg.bin",argv[1]);
 	int fd6 = open(filename,O_CREAT|O_RDWR,00666 );
-	ftruncate(fd6, edge_count*sizeof(vertex_t));
-	index_t* weight= (vertex_t*)mmap(NULL,edge_count*sizeof(vertex_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd6,0);
+	ftruncate(fd6, vert_count*sizeof(index_t));
+	index_t* outdegree = (index_t*)mmap(NULL,vert_count*sizeof(index_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd6,0);
+	assert(outdegree != MAP_FAILED);
+    
+    //added by Hang to generate a weight file
+	sprintf(filename,"%s_weight.bin",argv[1]);
+	int fd7 = open(filename,O_CREAT|O_RDWR,00666 );
+	ftruncate(fd7, edge_count*sizeof(vertex_t));
+	index_t* weight= (vertex_t*)mmap(NULL,edge_count*sizeof(vertex_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd7,0);
 	assert(weight != MAP_FAILED);
 	//-End 
 
 	sprintf(filename,"%s_head.bin",argv[1]);
-	int fd5 = open(filename,O_CREAT|O_RDWR,00666 );
-	ftruncate(fd5, edge_count*sizeof(vertex_t));
-	vertex_t* head = (vertex_t*)mmap(NULL,edge_count*sizeof(vertex_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd5,0);
+	int fd8 = open(filename,O_CREAT|O_RDWR,00666 );
+	ftruncate(fd8, edge_count*sizeof(vertex_t));
+	vertex_t* head = (vertex_t*)mmap(NULL,edge_count*sizeof(vertex_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd8,0);
 	assert(head != MAP_FAILED);
 
-	sprintf(filename,"%s_deg.bin",argv[1]);
-	int fd2 = open(filename,O_CREAT|O_RDWR,00666 );
-	ftruncate(fd2, vert_count*sizeof(index_t));
-	index_t* degree = (index_t*)mmap(NULL,vert_count*sizeof(index_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd2,0);
-	assert(degree != MAP_FAILED);
-	
-	sprintf(filename,"%s_beg_pos.bin",argv[1]);
-	int fd3 = open(filename,O_CREAT|O_RDWR,00666 );
-	ftruncate(fd3, (vert_count+1)*sizeof(index_t));
-	index_t* begin  = (index_t*)mmap(NULL,(vert_count+1)*sizeof(index_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd3,0);
-	assert(begin != MAP_FAILED);
-	
 	//step 3. write degree
 	for(int i=0; i<vert_count;i++){
-		degree[i]=0;
+		indegree[i]=0;
+        outdegree[i]=0;
 	}
 
 	vertex_t index, dest;
@@ -215,23 +234,32 @@ int main(int argc, char** argv){
 			next++;
 		}
 		curr = next;
-		degree[index]++;
-		if(is_reverse) degree[dest]++;
+		outdegree[index]++;
+        indegree[dest]++;
+		if(is_reverse) {
+            outdegree[dest]++;
+            indegree[index]++;
+        }
 //		cout<<index<<" "<<degree[index]<<endl;
 
 		offset++;
 	}
 //	exit(-1);
-	begin[0]=0;
-	begin[vert_count]=edge_count;
+	inbegin[0]=0;
+	inbegin[vert_count]=edge_count;
+	outbegin[0]=0;
+	outbegin[vert_count]=edge_count;
 
 	printf("Calculate beg_pos ...\n");
 	for(size_t i=1; i<vert_count; i++){
-		begin[i] = begin[i-1] + degree[i-1];
+		outbegin[i] = outbegin[i-1] + outdegree[i-1];
 //		cout<<begin[i]<<" "<<degree[i]<<endl;
-		degree [i-1] = 0;
+		outdegree [i-1] = 0;
+        inbegin[i] = inbegin[i-1] + indegree[i-1];
+        indegree [i-1] = 0;
 	}
-	degree[vert_count-1] = 0;
+    indegree[vert_count-1] = 0;
+	outdegree[vert_count-1] = 0;
 	//step 4: write adjacent list 
 	vertex_t v_id;
 	offset =0;
@@ -252,17 +280,20 @@ int main(int argc, char** argv){
 
 		char* sss1=ss+curr;
 		v_id = atol(sss1)-v_min;
-		adj[begin[index]+degree[index]] = v_id;
-		if(is_reverse) adj[begin[v_id]+degree[v_id]] = index;
-		
+		csr_adj[outbegin[index]+outdegree[index]] = v_id;
+        csc_adj[inbegin[v_id]+indegree[v_id]] = index;
+		if(is_reverse) {
+            csr_adj[outbegin[v_id]+outdegree[v_id]] = index;
+            csc_adj[inbegin[index]+inbegin[index]] = v_id;
+        }
 		//Added by Hang
 		int rand_weight=(rand()%63+1);
-		weight[begin[index]+degree[index]] = rand_weight;
-		if(is_reverse)
-			weight[begin[v_id]+degree[v_id]] = rand_weight;
+		weight[outbegin[index]+outdegree[index]] = rand_weight;
+		if(is_reverse){
+			weight[outbegin[v_id]+outdegree[v_id]] = rand_weight;
 		//-End
-	
-		head[begin[index]+degree[index]]= index;
+        }	
+		head[outbegin[index]+outdegree[index]]= index;
 		while((ss[next]!=' ')&&(ss[next]!='\n')&&(ss[next]!='\t')){
 			next++;
 		}
@@ -270,9 +301,9 @@ int main(int argc, char** argv){
 			next++;
 		}
 		curr = next;
-		degree[index]++;
-		if(is_reverse) degree[v_id]++;
-
+		outdegree[index]++;
+        indegree[v_id]++;
+		if(is_reverse) {outdegree[v_id]++;indegree[index]++;}
 		offset++;
 	}
 	
@@ -280,11 +311,16 @@ int main(int argc, char** argv){
 	//print output as a test
 //	for(size_t i=0; i<vert_count; i++){
 	for(size_t i=0; i<(vert_count<8?vert_count:8); i++){
-		cout<<i<<" "<<begin[i+1]-begin[i]<<" ";
-		for(index_t j=begin[i]; j<begin[i+1]; j++){
-			cout<<adj[j]<<" ";
+		cout<<i<<" "<<outbegin[i+1]-outbegin[i]<<" ";
+		for(index_t j=outbegin[i]; j<outbegin[i+1]; j++){
+			cout<<csr_adj[j]<<" ";
 		}
 //		if(degree[i]>0){
+        cout<<"\t\t";
+		cout<<inbegin[i+1]-inbegin[i]<<" ";
+		for(index_t j=inbegin[i]; j<inbegin[i+1]; j++){
+			cout<<csc_adj[j]<<" ";
+		}
 			cout<<endl;
 //		}
 	}
@@ -300,16 +336,22 @@ int main(int argc, char** argv){
 	munmap( weight,sizeof(vertex_t)*edge_count );
 	//-End
 
-	munmap( adj,sizeof(vertex_t)*edge_count );
+	munmap( csr_adj,sizeof(vertex_t)*edge_count );
+	munmap( csc_adj,sizeof(vertex_t)*edge_count );
 	munmap( head,sizeof(vertex_t)*edge_count );
-	munmap( begin,sizeof(index_t)*vert_count+1 );
-	munmap( degree,sizeof(index_t)*vert_count );
+	munmap( inbegin,sizeof(index_t)*vert_count+1 );
+	munmap( outbegin,sizeof(index_t)*vert_count+1 );
+	munmap( indegree,sizeof(index_t)*vert_count );
+	munmap( outdegree,sizeof(index_t)*vert_count );
+	close(fd1);
 	close(fd2);
 	close(fd3);
 	close(fd4);
 	close(fd5);
+	close(fd6);
+	close(fd7);
+	close(fd8);
 	
 	//-Added by Hang
-	close(fd6);
 	//-End
 }
