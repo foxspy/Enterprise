@@ -50,17 +50,21 @@ typename new_vert_t, typename new_index_t, typename new_weight_t>
 class graph
 {
 	public:
-		new_index_t *beg_pos;
+		new_index_t *outbeg_pos;
 		new_vert_t *csr;
-		new_weight_t *weight;
+		new_index_t *inbeg_pos;
+        new_vert_t *csc;
+        new_weight_t *weight;
 		new_index_t vert_count;
 		new_index_t edge_count;
 
 	public:
 		graph(){};
 		~graph(){};
-		graph(const char *beg_file, 
+		graph(const char *outbeg_file, 
 				const char *csr_file,
+                const char *inbeg_file,
+                const char *csc_file,
 				const char *weight_file);
 };
 #include "graph.hpp"

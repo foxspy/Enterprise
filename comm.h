@@ -160,8 +160,10 @@ index_t error_h;
 //texture <vertex_t,	1, cudaReadModeElementType> tex_adj_list[4];
 //size_t  tex_adj_off[4];
 
-texture <index_t, 	1, cudaReadModeElementType> tex_card;
-texture <index_t, 	1, cudaReadModeElementType> tex_strt;
+texture <index_t, 	1, cudaReadModeElementType> tex_csr_card;
+texture <index_t, 	1, cudaReadModeElementType> tex_csr_strt;
+texture <index_t, 	1, cudaReadModeElementType> tex_csc_card;
+texture <index_t, 	1, cudaReadModeElementType> tex_csc_strt;
 texture <depth_t, 	1, cudaReadModeElementType> tex_depth;
 
 texture <vertex_t,	1, cudaReadModeElementType> tex_sml_exq;

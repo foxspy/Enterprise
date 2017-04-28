@@ -112,8 +112,8 @@ __global__ void THD_expand_sort
 	if (tid < q_sz)
 	{
 		ex_ver			= tex1Dfetch(tex_sml_exq, tid);
-		card_curr		= tex1Dfetch(tex_card, ex_ver);
-		strt_pos_curr	= tex1Dfetch(tex_strt, ex_ver);
+		card_curr		= tex1Dfetch(tex_csr_card, ex_ver);
+		strt_pos_curr	= tex1Dfetch(tex_csr_strt, ex_ver);
 	}
 
 	while(tid<q_sz)
@@ -122,8 +122,8 @@ __global__ void THD_expand_sort
 		if(tid < q_sz)
 		{
 			ex_ver			= tex1Dfetch(tex_sml_exq, tid);
-			card_next		= tex1Dfetch(tex_card, ex_ver);
-			strt_pos_next	= tex1Dfetch(tex_strt, ex_ver);
+			card_next		= tex1Dfetch(tex_csr_card, ex_ver);
+			strt_pos_next	= tex1Dfetch(tex_csr_strt, ex_ver);
 		}
 
 		index_t lane = strt_pos_curr;
@@ -230,8 +230,8 @@ __global__ void WAP_expand_sort
 	if (vec_id < q_sz)
 	{
 		ex_ver			= tex1Dfetch(tex_mid_exq, vec_id);
-		card_curr		= tex1Dfetch(tex_card, ex_ver);
-		strt_pos_curr	= tex1Dfetch(tex_strt, ex_ver);
+		card_curr		= tex1Dfetch(tex_csr_card, ex_ver);
+		strt_pos_curr	= tex1Dfetch(tex_csr_strt, ex_ver);
 	}
 
 	while(vec_id < q_sz)
@@ -240,8 +240,8 @@ __global__ void WAP_expand_sort
 		if(vec_id < q_sz)
 		{
 			ex_ver			= tex1Dfetch(tex_mid_exq, vec_id);
-			card_next		= tex1Dfetch(tex_card, ex_ver);
-			strt_pos_next	= tex1Dfetch(tex_strt, ex_ver);
+			card_next		= tex1Dfetch(tex_csr_card, ex_ver);
+			strt_pos_next	= tex1Dfetch(tex_csr_strt, ex_ver);
 		}
 	
 		index_t lane	= lane_s + strt_pos_curr;
@@ -343,8 +343,8 @@ __global__ void CTA_expand_sort
 	if (vec_id<q_sz)
 	{
 		ex_ver			= tex1Dfetch(tex_lrg_exq, vec_id);
-		card_curr		= tex1Dfetch(tex_card, ex_ver);
-		strt_pos_curr	= tex1Dfetch(tex_strt, ex_ver);
+		card_curr		= tex1Dfetch(tex_csr_card, ex_ver);
+		strt_pos_curr	= tex1Dfetch(tex_csr_strt, ex_ver);
 	}
 
 	while(vec_id<q_sz)
@@ -354,8 +354,8 @@ __global__ void CTA_expand_sort
 		if(vec_id < q_sz)
 		{
 			ex_ver			= tex1Dfetch(tex_lrg_exq, vec_id);
-			card_next		= tex1Dfetch(tex_card, ex_ver);
-			strt_pos_next	= tex1Dfetch(tex_strt, ex_ver);
+			card_next		= tex1Dfetch(tex_csr_card, ex_ver);
+			strt_pos_next	= tex1Dfetch(tex_csr_strt, ex_ver);
 		}
 		
 		index_t lane	= threadIdx.x + strt_pos_curr;
@@ -465,8 +465,8 @@ __global__ void THD_bu_expand_sort
 	if (tid < q_sz)
 	{
 		ex_ver_curr		= tex1Dfetch(tex_sml_exq, tid);
-		card_curr		= tex1Dfetch(tex_card, ex_ver_curr);
-		strt_pos_curr	= tex1Dfetch(tex_strt, ex_ver_curr);
+		card_curr		= tex1Dfetch(tex_csc_card, ex_ver_curr);
+		strt_pos_curr	= tex1Dfetch(tex_csc_strt, ex_ver_curr);
 	}
 
 	while(tid<q_sz)
@@ -475,8 +475,8 @@ __global__ void THD_bu_expand_sort
 		if(tid < q_sz)
 		{
 			ex_ver_next		= tex1Dfetch(tex_sml_exq, tid);
-			card_next		= tex1Dfetch(tex_card, ex_ver_next);
-			strt_pos_next	= tex1Dfetch(tex_strt, ex_ver_next);
+			card_next		= tex1Dfetch(tex_csc_card, ex_ver_next);
+			strt_pos_next	= tex1Dfetch(tex_csc_strt, ex_ver_next);
 		}
 
 		index_t lane = strt_pos_curr;
@@ -577,8 +577,8 @@ __global__ void WAP_bu_expand_sort
 	if (vec_id < q_sz)
 	{
 		ex_ver_curr		= tex1Dfetch(tex_mid_exq, vec_id);
-		card_curr		= tex1Dfetch(tex_card, ex_ver_curr);
-		strt_pos_curr	= tex1Dfetch(tex_strt, ex_ver_curr);
+		card_curr		= tex1Dfetch(tex_csc_card, ex_ver_curr);
+		strt_pos_curr	= tex1Dfetch(tex_csc_strt, ex_ver_curr);
 		if(card_curr%vec_sz)
 		{
 			card_curr_revised = (((card_curr>>5)+1)<<5);
@@ -593,8 +593,8 @@ __global__ void WAP_bu_expand_sort
 		if(vec_id < q_sz)
 		{
 			ex_ver_next		= tex1Dfetch(tex_mid_exq, vec_id);
-			card_next		= tex1Dfetch(tex_card, ex_ver_next);
-			strt_pos_next	= tex1Dfetch(tex_strt, ex_ver_next);
+			card_next		= tex1Dfetch(tex_csc_card, ex_ver_next);
+			strt_pos_next	= tex1Dfetch(tex_csc_strt, ex_ver_next);
 			if(card_next%vec_sz)
 			{
 				card_next_revised = (((card_next>>5)+1)<<5);
@@ -717,8 +717,8 @@ __global__ void CTA_bu_expand_sort
 	if (vec_id < q_sz)
 	{
 		ex_ver_curr		= tex1Dfetch(tex_lrg_exq, vec_id);
-		card_curr		= tex1Dfetch(tex_card, ex_ver_curr);
-		strt_pos_curr	= tex1Dfetch(tex_strt, ex_ver_curr);
+		card_curr		= tex1Dfetch(tex_csc_card, ex_ver_curr);
+		strt_pos_curr	= tex1Dfetch(tex_csc_strt, ex_ver_curr);
 		if(card_curr%blockDim.x)
 		{
 			card_curr_revised = card_curr + blockDim.x 
@@ -735,8 +735,8 @@ __global__ void CTA_bu_expand_sort
 		if(vec_id<q_sz)
 		{
 			ex_ver_next		= tex1Dfetch(tex_lrg_exq, vec_id);
-			card_next		= tex1Dfetch(tex_card, ex_ver_next);
-			strt_pos_next	= tex1Dfetch(tex_strt, ex_ver_next);
+			card_next		= tex1Dfetch(tex_csc_card, ex_ver_next);
+			strt_pos_next	= tex1Dfetch(tex_csc_strt, ex_ver_next);
 			if(card_next%blockDim.x)
 			{
 				card_next_revised = card_next+blockDim.x 

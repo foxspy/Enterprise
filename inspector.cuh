@@ -70,14 +70,14 @@ __global__ void sort_dist_inspect_clfy
 	index_t card_sum		= 0;
 
 	if(tid < NUM_VER){
-		card_curr	= tex1Dfetch(tex_card, tid);
+		card_curr	= tex1Dfetch(tex_csr_card, tid);
 		depth_curr	= tex1Dfetch(tex_depth, tid);
 		tid_next	+= GRNTY;
 	}
 	
 	while(tid<NUM_VER){
 		if(tid_next < NUM_VER){
-			card_next	= tex1Dfetch(tex_card, tid_next);
+			card_next	= tex1Dfetch(tex_csr_card, tid_next);
 			depth_next	= tex1Dfetch(tex_depth, tid_next);
 		}
 
@@ -189,13 +189,13 @@ __global__ void sort_switch_dist_inspect_clfy
 		tid		 		 = strt_pos;
 		index_t tid_next = strt_pos + 1; 
 		if(step_sz){
-			card_curr	= tex1Dfetch(tex_card,  strt_pos);
+			card_curr	= tex1Dfetch(tex_csc_card,  strt_pos);
 			depth_curr	= tex1Dfetch(tex_depth, strt_pos);
 		}
 		
 		while(tid < end_pos){
 			if( tid_next < end_pos){
-				card_next	= tex1Dfetch(tex_card, tid_next);
+				card_next	= tex1Dfetch(tex_csc_card, tid_next);
 				depth_next	= tex1Dfetch(tex_depth,tid_next);
 			}
 			
@@ -371,7 +371,7 @@ __global__ void sort_bu_dist_inspect_clfy
 
 	if(tid < NUM_VER)
 	{
-		card_curr	= tex1Dfetch(tex_card, tid);
+		card_curr	= tex1Dfetch(tex_csc_card, tid);
 		depth_curr	= tex1Dfetch(tex_depth, tid);
 		tid_next 	+= GRNTY;
 	}
@@ -380,7 +380,7 @@ __global__ void sort_bu_dist_inspect_clfy
 	{
 		if(tid_next < NUM_VER)
 		{
-			card_next	= tex1Dfetch(tex_card, tid_next);
+			card_next	= tex1Dfetch(tex_csc_card, tid_next);
 			depth_next	= tex1Dfetch(tex_depth, tid_next);
 		}
 		

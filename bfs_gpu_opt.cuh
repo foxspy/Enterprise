@@ -42,7 +42,8 @@ void bfs_tdbu_clfy_sort
 (  
 	vertex_t 	src_v, 
 	depth_t		*depth_d, 
-	const vertex_t *adj_list_d,
+	const vertex_t *csr_list_d,
+	const vertex_t *csc_list_d,
 	vertex_t	*ex_q_sml_d,//+--------------------
 	vertex_t	*ex_q_mid_d,//|
 	vertex_t	*ex_q_lrg_d,//|-------------------+
@@ -64,7 +65,8 @@ void bfs_tdbu_clfy_sort
 	const index_t lrg_shed,
 	const index_t bin_sz
 #ifdef ENABLE_MONITORING
-	,index_t	*adj_card_d
+	,index_t	*csr_card_d
+	,index_t	*csc_card_d
 #endif
 )
 {	
@@ -90,12 +92,13 @@ void bfs_tdbu_clfy_sort
 
 	cudaMallocHost((void **)& d_card, sizeof(index_t)*vert_count);
 	cudaMallocHost((void **)& d_ex_queue, sizeof(index_t)*vert_count);
-	cudaMemcpy(d_card, adj_card_d, sizeof(index_t)*vert_count,
+	cudaMemcpy(d_card, csr_card_d, sizeof(index_t)*vert_count,
 					cudaMemcpyDeviceToHost);
 	index_t expanded_count;
 #endif
 	
 	int last_ct	= -1;
+    int last_sml_t=-1,last_mid_t=-1,last_lrg_t=-1;
 	for(level = 0;;level++)
 	{
 #ifdef ENABLE_MONITORING
@@ -194,11 +197,15 @@ void bfs_tdbu_clfy_sort
 		{
 			if(ex_sml_sz+ex_mid_sz+ex_lrg_sz == 0)
 				break;
-
+            printf("ex_sml_sz: %d\t\t ex_mid_sz: %d\t\t ex_lrg_sz: %d\t\t\n",ex_sml_sz,ex_mid_sz,ex_lrg_sz);
 		}else{
 			if(last_ct == (ex_sml_sz+ex_mid_sz+ex_lrg_sz))
 				break;
-			last_ct	= ex_sml_sz + ex_mid_sz + ex_lrg_sz;
+            printf("ex_sml_sz: %d\t\t ex_mid_sz: %d\t\t ex_lrg_sz: %d\t\t\n",last_sml_t-ex_sml_sz,last_mid_t-ex_mid_sz,last_lrg_t-ex_lrg_sz);
+			last_sml_t = ex_sml_sz;
+            last_mid_t = ex_mid_sz;
+            last_lrg_t = ex_lrg_sz;
+            last_ct	= ex_sml_sz + ex_mid_sz + ex_lrg_sz;
 		}
 		
 #ifdef ENABLE_MONITORING
@@ -237,7 +244,7 @@ void bfs_tdbu_clfy_sort
 			(
 				depth_d,
 				level + 1,
-				adj_list_d,
+				csc_list_d,
 				stream
 			);
 			for(index_t i=0;i<Q_CARD; i++)
@@ -255,7 +262,7 @@ void bfs_tdbu_clfy_sort
 			(
 				depth_d,
 				level + 1,
-				adj_list_d,
+				csr_list_d,
 				stream
 			);
 			
@@ -293,8 +300,10 @@ void bfs_tdbu_clfy_sort
 template<typename vertex_t, typename index_t>
 int bfs_gpu_coalescing_mem(		
 		vertex_t* src_list, 
-		index_t *beg_pos, 
+		index_t *outbeg_pos, 
 		vertex_t *csr,
+		index_t *inbeg_pos, 
+		vertex_t *csc,
 		index_t vert_count,
 		index_t edge_count,
 		index_t gpu_id)
@@ -305,9 +314,12 @@ int bfs_gpu_coalescing_mem(
 	cudaSetDevice(gpu_id);
 	
 	depth_t 	*depth_d;
-	index_t  	*adj_card_d;
-	vertex_t 	*adj_list_d;
-	index_t  	*strt_pos_d;
+	index_t  	*csr_card_d;
+	vertex_t 	*csr_list_d;
+	index_t  	*csr_pos_d;
+	index_t  	*csc_card_d;
+	vertex_t 	*csc_list_d;
+	index_t  	*csc_pos_d;
 
 	//+-----------------
 	//|CLASSIFICATION
@@ -328,9 +340,12 @@ int bfs_gpu_coalescing_mem(
 	allocator<vertex_t, index_t, depth_t>::
 	alloc_array(
 				depth_d,
-				adj_list_d,
-				adj_card_d,
-				strt_pos_d,
+				csr_list_d,
+				csr_card_d,
+				csr_pos_d,
+				csc_list_d,
+				csc_card_d,
+				csc_pos_d,
 				ex_q_sml_d,//+--------------------
 				ex_q_mid_d,//|
 				ex_q_lrg_d,//|-------------------+
@@ -345,8 +360,10 @@ int bfs_gpu_coalescing_mem(
 				ex_cat_lrg_d,//each thd obt ex_q 
 				tr_edges_c_d,
 				tr_edges_c_h,
-				beg_pos,
+				outbeg_pos,
 				csr,
+				inbeg_pos,
+				csc,
 				vert_count,
 				edge_count,
 				stream,
@@ -367,7 +384,7 @@ int bfs_gpu_coalescing_mem(
 	double average_teps	= 0.0;
 	double curr_teps	= 0.0;
 	index_t validate_count = 0;
-	for(index_t i = 0; i< 64; i++)
+	for(index_t i = 0; i< 1; i++)
 	{
 		std::cout<<"Test "<<i+1<<"\n";
 		std::cout<<"Started from: "<<src_list[i]<<"\n";
@@ -383,7 +400,8 @@ int bfs_gpu_coalescing_mem(
 		(
 			src_list[i], 
 			depth_d, 
-			adj_list_d,
+			csr_list_d,
+			csc_list_d,
 			ex_q_sml_d,//+--------------------
 			ex_q_mid_d,//|
 			ex_q_lrg_d,//|-------------------+
@@ -405,7 +423,8 @@ int bfs_gpu_coalescing_mem(
 			lrg_shed,
 			bin_sz
 #ifdef ENABLE_MONITORING
-			,adj_card_d
+			,csr_card_d
+			,csc_card_d
 #endif
 		 );
 		tm_end=wtime();
@@ -419,13 +438,13 @@ int bfs_gpu_coalescing_mem(
 				std::cout<<"copy result error\n";
 
 			int ret = validate<index_t, vertex_t, depth_t>
-				(depth_h, beg_pos, csr, vert_count);
+				(depth_h, outbeg_pos, csr, vert_count);
 
 			std::cout<<"\nBFS result validation: "<<
 						//((ret == 0 )? "CORRECT":"WRONG")<<"\n";
 						((ret == 0 )? "CORRECT":"CORRECT")<<"\n";
 			report<vertex_t, index_t, depth_t>
-				(agg_tr_edges, agg_tr_v, beg_pos, depth_h, vert_count);
+				(agg_tr_edges, agg_tr_v, outbeg_pos, depth_h, vert_count);
 			curr_teps	= agg_tr_edges/(1000000000*tm_consume);
 			average_teps= (curr_teps + average_teps*(validate_count-1))
 								/validate_count;

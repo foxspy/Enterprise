@@ -35,38 +35,60 @@ typename new_vert_t, typename new_index_t, typename new_weight_t>
 graph<file_vert_t,file_index_t, file_weight_t,
 new_vert_t,new_index_t,new_weight_t>
 ::graph(
-		const char *beg_file,
+		const char *outbeg_file,
 		const char *csr_file,
+		const char *inbeg_file,
+		const char *csc_file,
 		const char *weight_file)
 {
 	double tm=wtime();
 	FILE *file=NULL;
 	file_index_t ret;
 	
-	vert_count=fsize(beg_file)/sizeof(file_index_t) - 1;
+	vert_count=fsize(outbeg_file)/sizeof(file_index_t) - 1;
 	edge_count=fsize(csr_file)/sizeof(file_vert_t);
 	
-	file=fopen(beg_file, "rb");
+	file=fopen(outbeg_file, "rb");
 	if(file!=NULL)
 	{
-		file_index_t *tmp_beg_pos = new file_index_t[vert_count+1];
-		ret=fread(tmp_beg_pos, sizeof(file_index_t), 
+		file_index_t *tmp_outbeg_pos = new file_index_t[vert_count+1];
+		ret=fread(tmp_outbeg_pos, sizeof(file_index_t), 
 				vert_count+1, file);
 		assert(ret==vert_count+1);
 		fclose(file);
-		std::cout<<"Possible edge count: "<<tmp_beg_pos[vert_count]<<"\n";
+		std::cout<<"Possible edge count: "<<tmp_outbeg_pos[vert_count]<<"\n";
 	
 		//converting to new type when different 
 		if(sizeof(file_index_t)!=sizeof(new_index_t))
 		{
-			beg_pos = new new_index_t[vert_count+1];
+			outbeg_pos = new new_index_t[vert_count+1];
 			for(new_index_t i=0;i<vert_count+1;++i)
-				beg_pos[i]=(new_index_t)tmp_beg_pos[i];
-			delete[] tmp_beg_pos;
-		}else{beg_pos=(new_index_t*)tmp_beg_pos;}
-	}else std::cout<<"beg file cannot open\n";
+				outbeg_pos[i]=(new_index_t)tmp_outbeg_pos[i];
+			delete[] tmp_outbeg_pos;
+		}else{outbeg_pos=(new_index_t*)tmp_outbeg_pos;}
+	}else std::cout<<"outbeg file cannot open\n";
 
-	file=fopen(csr_file, "rb");
+    file=fopen(inbeg_file, "rb");
+	if(file!=NULL)
+	{
+		file_index_t *tmp_inbeg_pos = new file_index_t[vert_count+1];
+		ret=fread(tmp_inbeg_pos, sizeof(file_index_t), 
+				vert_count+1, file);
+		assert(ret==vert_count+1);
+		fclose(file);
+		std::cout<<"Possible edge count: "<<tmp_inbeg_pos[vert_count]<<"\n";
+	
+		//converting to new type when different 
+		if(sizeof(file_index_t)!=sizeof(new_index_t))
+		{
+			inbeg_pos = new new_index_t[vert_count+1];
+			for(new_index_t i=0;i<vert_count+1;++i)
+				inbeg_pos[i]=(new_index_t)tmp_inbeg_pos[i];
+			delete[] tmp_inbeg_pos;
+		}else{inbeg_pos=(new_index_t*)tmp_inbeg_pos;}
+	}else std::cout<<"inbeg file cannot open\n";
+	
+    file=fopen(csr_file, "rb");
 	if(file!=NULL)
 	{
 		file_vert_t *tmp_csr = NULL;
@@ -88,6 +110,27 @@ new_vert_t,new_index_t,new_weight_t>
 
 	}else std::cout<<"CSR file cannot open\n";
 
+    file=fopen(csc_file, "rb");
+	if(file!=NULL)
+	{
+		file_vert_t *tmp_csc = NULL;
+		if(posix_memalign((void **)&tmp_csc,32,sizeof(file_vert_t)*edge_count))
+			perror("posix_memalign");
+		
+		ret=fread(tmp_csc, sizeof(file_vert_t), edge_count, file);
+		assert(ret==edge_count);
+		fclose(file);
+			
+		if(sizeof(file_vert_t)!=sizeof(new_vert_t))
+		{
+			if(posix_memalign((void **)&csc,32,sizeof(new_vert_t)*edge_count))
+				perror("posix_memalign");
+			for(new_index_t i=0;i<edge_count;++i)
+				csc[i]=(new_vert_t)tmp_csc[i];
+			delete[] tmp_csc;
+		}else csc=(new_vert_t*)tmp_csc;
+
+	}else std::cout<<"CSC file cannot open\n";
 
 	file=fopen(weight_file, "rb");
 	if(file!=NULL)

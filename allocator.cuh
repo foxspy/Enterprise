@@ -35,9 +35,12 @@ struct allocator{
 inline static __host__ void alloc_array
 (
 	depth_t*	&depth_d,	//vertex level
-	vertex_t* 	&adj_list_d,//vertex adj ver
-	index_t* 	&adj_card_d,//each adj ver len
-	index_t* 	&strt_pos_d,//adj_list_d strt pos
+	vertex_t* 	&csr_list_d,//vertex adj ver
+	index_t* 	&csr_card_d,//each adj ver len
+	index_t* 	&csr_pos_d,//csr_list_d strt pos
+	vertex_t* 	&csc_list_d,//vertex adj ver
+	index_t* 	&csc_card_d,//each adj ver len
+	index_t* 	&csc_pos_d,//csr_list_d strt pos
 	vertex_t* 	&ex_q_sml_d,//+--------------------
 	vertex_t* 	&ex_q_mid_d,//|
 	vertex_t* 	&ex_q_lrg_d,//|-------------------+
@@ -52,17 +55,19 @@ inline static __host__ void alloc_array
 	vertex_t*	&ex_cat_lrg_d,//each thd obt ex_q 
 	index_t*	&tr_edges_c_d,
 	index_t*	&tr_edges_c_h,
-	index_t* beg_pos,
+	index_t* csr_pos,
 	index_t* csr,
+	index_t* csc_pos,
+	index_t* csc,
 	index_t vert_count,
 	index_t edge_count,
 	cudaStream_t* 	&stream,
 	const index_t	bin_sz
 )
 {
-	//used for 	-strt_pos_d
-	//			-adj_card_d
-	//			-adj_list_d
+	//used for 	-csr_pos_d
+	//			-csr_card_d
+	//			-csr_list_d
 	long cpu_bytes	= 0;
 	long gpu_bytes	= 0;
 
@@ -104,20 +109,28 @@ inline static __host__ void alloc_array
 	H_ERR(cudaMalloc((void **)&depth_d, 		sizeof(depth_t)*vert_count));
 	H_ERR(cudaBindTexture(0,tex_depth,depth_d,sizeof(depth_t)*vert_count));
 
-	H_ERR(cudaMalloc((void **)&adj_card_d, 	sizeof(index_t)*vert_count));
-	H_ERR(cudaMalloc((void **)&strt_pos_d,	sizeof(index_t)*vert_count));
-	gpu_bytes		+= (sizeof(index_t)*vert_count*3);
+	H_ERR(cudaMalloc((void **)&csr_card_d, 	sizeof(index_t)*vert_count));
+	H_ERR(cudaMalloc((void **)&csr_pos_d,	sizeof(index_t)*vert_count));
+	H_ERR(cudaMalloc((void **)&csc_card_d, 	sizeof(index_t)*vert_count));
+	H_ERR(cudaMalloc((void **)&csc_pos_d,	sizeof(index_t)*vert_count));
+	gpu_bytes		+= (sizeof(index_t)*vert_count*5);
 		
-	H_ERR(cudaMemcpy(strt_pos_d, beg_pos,	sizeof(index_t)*vert_count, 
+	H_ERR(cudaMemcpy(csr_pos_d, csr_pos,	sizeof(index_t)*vert_count, 
+				cudaMemcpyHostToDevice));
+	H_ERR(cudaMemcpy(csc_pos_d, csc_pos,	sizeof(index_t)*vert_count, 
 				cudaMemcpyHostToDevice));
 
-	H_ERR(cudaBindTexture(0, tex_strt, strt_pos_d, sizeof(index_t)*vert_count));
+	H_ERR(cudaBindTexture(0, tex_csr_strt, csr_pos_d, sizeof(index_t)*vert_count));
+	H_ERR(cudaBindTexture(0, tex_csc_strt, csc_pos_d, sizeof(index_t)*vert_count));
 
 	EDGES_C = edge_count;
-	H_ERR(cudaMalloc((void **)&adj_list_d,sizeof(vertex_t)*edge_count));
-	H_ERR(cudaMemcpy(adj_list_d, 
+	H_ERR(cudaMalloc((void **)&csr_list_d,sizeof(vertex_t)*edge_count));
+	H_ERR(cudaMalloc((void **)&csc_list_d,sizeof(vertex_t)*edge_count));
+	H_ERR(cudaMemcpy(csr_list_d, 
 						csr,sizeof(vertex_t)*edge_count, cudaMemcpyHostToDevice));
-	gpu_bytes		+= (sizeof(vertex_t)*edge_count);
+	H_ERR(cudaMemcpy(csc_list_d, 
+						csc,sizeof(vertex_t)*edge_count, cudaMemcpyHostToDevice));
+	gpu_bytes		+= (sizeof(vertex_t)*edge_count*2);
 	
 	
 	//////////////////////////
@@ -127,12 +140,18 @@ inline static __host__ void alloc_array
 		cudaStreamCreate(&(stream[i]));
 
 	for(index_t i=0; i<vert_count; i++)
-		temp[i]		= beg_pos[i+1]-beg_pos[i];
-
-	H_ERR(cudaMemcpy(adj_card_d, temp, sizeof(index_t)*vert_count, 
+		temp[i]		= csr_pos[i+1]-csr_pos[i];
+	H_ERR(cudaMemcpy(csr_card_d, temp, sizeof(index_t)*vert_count, 
 								cudaMemcpyHostToDevice));
-	H_ERR(cudaBindTexture(0, tex_card, 	 
-						adj_card_d, sizeof(index_t)*vert_count));
+	for(index_t i=0; i<vert_count; i++)
+		temp[i]		= csc_pos[i+1]-csc_pos[i];
+	H_ERR(cudaMemcpy(csc_card_d, temp, sizeof(index_t)*vert_count, 
+								cudaMemcpyHostToDevice));
+
+	H_ERR(cudaBindTexture(0, tex_csr_card, 	 
+						csr_card_d, sizeof(index_t)*vert_count));
+	H_ERR(cudaBindTexture(0, tex_csc_card, 	 
+						csc_card_d, sizeof(index_t)*vert_count));
 
 	H_ERR(cudaMalloc((void **)&tr_edges_c_d, 
 					sizeof(index_t)*BLKS_NUM));

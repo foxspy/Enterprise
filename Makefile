@@ -4,7 +4,7 @@ COMMFLAGS=-O3 --compiler-options -Wall -Xptxas -v
 CUCC= "$(shell which nvcc)"
 
 CUFLAGS= -arch=sm_35  ${COMMFLAGS}#-Xptxas -dlcm=cg#disable l1 cache
-CUFLAGS+= -ccbin=g++ -Xcompiler -fopenmp
+CUFLAGS+= -ccbin=g++ -Xcompiler -fopenmp 
 
 ifeq ($(enable_monitor), 1)
 	CUFLAGS+= -DENABLE_MONITORING
